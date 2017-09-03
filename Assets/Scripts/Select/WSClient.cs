@@ -6,19 +6,22 @@ using WebSocketSharp;
 
 public class WSClient : MonoBehaviour
 {
-    public CustomData customData;
+    public CustomData CustomDefault;
     public ARData arData;
+    public bool isAuthenticated = false;
 
     private WebSocket ws = null;
     private Queue msgQueue;
     private bool isPerformer = false;
+    private static bool isEndPerformed = false;
 
     private bool waitCalibrate = true;
 
-    public void Connect(string _addr, bool _performer)
+    public void Connect(string _addr, bool _performer, bool _isAuthenticated)
     {
         ws = new WebSocket("ws://" + _addr + "/ws");
         isPerformer = _performer;
+        isAuthenticated = _isAuthenticated;
 
         ws.OnOpen += (sender, e) =>
         {
@@ -51,12 +54,24 @@ public class WSClient : MonoBehaviour
 
     }
 
-    public void SendLike(string effname)
+    public void Send(string _action, object _data)
     {
         string msg = "";
         msg += "SERV\n";
-        msg += "LIKE\n";
-        msg += effname + "\n";
+        msg += _action + "\n";
+
+        if (_data != null)
+        {
+            if (_data is string)
+            {
+                msg += _data;
+            } else
+            {
+                msg += JsonUtility.ToJson(_data);
+            }    
+        }
+
+        msg += "\n";
 
         ws.Send(msg);
     }
@@ -69,7 +84,15 @@ public class WSClient : MonoBehaviour
 
     private void Start()
     {
-        
+        if (isEndPerformed)
+        {
+            DialogManager.Instance.SetLabel("OK", "キャンセル", "閉じる");
+            DialogManager.Instance.ShowSubmitDialog(
+                "演技が終了しました。",
+                (ret) => { }
+            );
+            isEndPerformed = false;
+        }
     }
 
     private void Update()
@@ -82,12 +105,18 @@ public class WSClient : MonoBehaviour
             {
                 var msg = ((string)_msg).Split();
                 // メッセージの解析・処理
+                if (msg[1] == "ENDPERFORM")
+                {
+                    isEndPerformed = true;
+                    SceneManager.LoadScene("Select");
+                }
+
                 if (waitCalibrate)
                 {
                     if (isPerformer && msg[1] == "CALIB_OK")
                     {
                         waitCalibrate = false;
-                        customData = JsonUtility.FromJson<CustomData>(msg[2]);
+                        CustomDefault = JsonUtility.FromJson<CustomData>(msg[2]);
                         SceneManager.LoadScene("Customize");
 
                     } else if (!isPerformer && msg[1] == "AR_OK")

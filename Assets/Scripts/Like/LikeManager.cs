@@ -25,6 +25,8 @@ public class LikeManager : MonoBehaviour
     private Vector3 touchEndPos;
     private Vector3 effectInitPos;
 
+    private readonly static Color32[] colors = { new Color32(255, 0, 0, 255), new Color32(0, 255, 0, 255), new Color32(0, 0, 255, 255), new Color32(255, 255, 0, 255) };
+    private int currentColor;
     private string effectName;
     private SpriteLoader sploader;
 
@@ -36,7 +38,10 @@ public class LikeManager : MonoBehaviour
         int idx = Random.Range(0, wsclient.arData.EnabledEffects.Length);
         effectName = wsclient.arData.EnabledEffects[idx];
         Debug.Log(effectName);
+        currentColor = Random.Range(0, 4);
+
         Effect.GetComponent<Image>().sprite = sploader.GetSprite(effectName);
+        Effect.GetComponent<Image>().color = colors[currentColor];
 
         isTransition = true;
         Effect.SetActive(true);
@@ -80,6 +85,15 @@ public class LikeManager : MonoBehaviour
 
     }
 
+    public void Touch()
+    {
+        Debug.Log("Effect touched.");
+        currentColor++;
+        currentColor %= 4;
+        Effect.GetComponent<Image>().color = colors[currentColor];
+
+    }
+
     public void BtnAR_OnClick()
     {
         if (moveEffect || dialogShown) return;
@@ -100,6 +114,7 @@ public class LikeManager : MonoBehaviour
         Effect.SetActive(false);
         Arrow.SetActive(false);
         effectInitPos = Effect.transform.position;
+        Debug.Log(effectInitPos);
 
         // 乱数シードの設定
         Random.InitState(System.Environment.TickCount + 114514);
@@ -127,7 +142,8 @@ public class LikeManager : MonoBehaviour
                 moveEffect = false;
 
                 // いいね！の送信
-                GameObject.Find("WSClient").GetComponent<WSClient>().SendLike(effectName);
+                var data = new LikeData(effectName, colors[currentColor]);
+                GameObject.Find("WSClient").GetComponent<WSClient>().Send("LIKE", data);
 
                 // ダイアログの表示と画面遷移
                 ReLike = true;

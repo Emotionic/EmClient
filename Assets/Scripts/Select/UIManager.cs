@@ -129,7 +129,7 @@ public class UIManager : MonoBehaviour
 
         // キャリブレーション待機画面へ
         TransitionView("Forward", CalibWaitView);
-        GameObject.Find("WSClient").GetComponent<WSClient>().Connect(Address, isCustomizeMode);
+        GameObject.Find("WSClient").GetComponent<WSClient>().Connect(Address, isCustomizeMode, res == "authenticated");
 
     }
 
@@ -155,7 +155,7 @@ public class UIManager : MonoBehaviour
         }
 
         TransitionView("Forward", CalibWaitView);
-        GameObject.Find("WSClient").GetComponent<WSClient>().Connect(Address, true);
+        GameObject.Find("WSClient").GetComponent<WSClient>().Connect(Address, true, false);
 
     }
 
@@ -198,7 +198,7 @@ public class UIManager : MonoBehaviour
 
         // キャリブレーション・接続待機画面へ
         TransitionView("Forward", CalibWaitView);
-        GameObject.Find("WSClient").GetComponent<WSClient>().Connect(Address, _data.isPerformer);
+        GameObject.Find("WSClient").GetComponent<WSClient>().Connect(Address, _data.isPerformer, res == "authenticated");
 
     }
 

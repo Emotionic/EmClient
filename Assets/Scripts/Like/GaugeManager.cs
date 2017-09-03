@@ -15,7 +15,7 @@ public class GaugeManager : MonoBehaviour
     private const float accelerometerUpdateInterval = 1.0f / 60.0f;
     private const float lowPassKernelWidthInSeconds = 1.0f;
     private const float shakeDetectionThreshold = 2.0f * 2.0f;
- 
+
     private float lowPassFilterFactor = accelerometerUpdateInterval / lowPassKernelWidthInSeconds;
     private Vector3 lowPassValue = Vector3.zero;
     private Vector3 acceleration;
@@ -31,7 +31,8 @@ public class GaugeManager : MonoBehaviour
 
     public void ShakeForDebug()
     {
-        if (count >= threshould * level) return;
+        if (count >= threshould * level)
+            return;
         count += threshould;
         ProcessScale();
     }
@@ -48,7 +49,8 @@ public class GaugeManager : MonoBehaviour
             this.GetComponent<AudioSource>().PlayOneShot(ChargedSE, 1.0f);
 
             likeManager.DoTransition();
-        } else if ((count / threshould) > current_lv)
+        }
+        else if ((count / threshould) > current_lv)
         {
             current_lv++;
             // this.GetComponent<PlayWave>().Play((PlayState)(current_lv + 3));
@@ -66,11 +68,19 @@ public class GaugeManager : MonoBehaviour
         gauge_bg = this.transform.Find("gauge_bg").GetComponent<Image>();
 
         // ダイアログの表示
+        confirmed = false;
         if (!LikeManager.ReLike)
         {
             DialogManager.Instance.SetLabel("OK", "キャンセル", "閉じる");
             DialogManager.Instance.ShowSubmitDialog("スマホを振って「いいね！」を送りましょう！", (ret) => { confirmed = true; });
+        } else
+        {
+            confirmed = true;
         }
+
+        // 変数初期化
+        count = 0;
+        current_lv = 0;
 
     }
 
