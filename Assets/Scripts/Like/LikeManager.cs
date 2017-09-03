@@ -21,6 +21,7 @@ public class LikeManager : MonoBehaviour
 
     private int Swipe_d = 300;
     private bool moveEffect = false;
+    private bool isDragging = false;
     private Vector3 touchStartPos;
     private Vector3 touchEndPos;
     private Vector3 effectInitPos;
@@ -46,6 +47,7 @@ public class LikeManager : MonoBehaviour
         isTransition = true;
         Effect.SetActive(true);
         Arrow.SetActive(true);
+        effectInitPos = Effect.transform.position;
 
     }
 
@@ -59,11 +61,13 @@ public class LikeManager : MonoBehaviour
     {
         if (moveEffect || dialogShown) return;
         touchStartPos = Input.mousePosition;
+        isDragging = true;
     }
 
     public void EndDrag()
     {
         if (moveEffect || dialogShown) return;
+        isDragging = false;
 
         touchEndPos = Input.mousePosition;
         float directionX = touchEndPos.x - touchStartPos.x;
@@ -87,6 +91,8 @@ public class LikeManager : MonoBehaviour
 
     public void Touch()
     {
+        if (moveEffect || dialogShown || isDragging) return;
+
         Debug.Log("Effect touched.");
         currentColor++;
         currentColor %= 4;
@@ -113,8 +119,6 @@ public class LikeManager : MonoBehaviour
         _overray = Overray.GetComponent<Image>();
         Effect.SetActive(false);
         Arrow.SetActive(false);
-        effectInitPos = Effect.transform.position;
-        Debug.Log(effectInitPos);
 
         // 乱数シードの設定
         Random.InitState(System.Environment.TickCount + 114514);
