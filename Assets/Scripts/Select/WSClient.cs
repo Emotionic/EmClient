@@ -26,12 +26,7 @@ public class WSClient : MonoBehaviour
         ws.OnOpen += (sender, e) =>
         {
             Debug.Log("WebSocket Open");
-
-            var msg = "SERV\n";
-            msg += isPerformer ? "CALIB\n" : "AR\n";
-
-            ws.Send(msg);
-
+            Send(isPerformer ? "CALIB" : "AR", null);
         };
 
         ws.OnMessage += (sender, e) =>
@@ -65,10 +60,11 @@ public class WSClient : MonoBehaviour
             if (_data is string)
             {
                 msg += _data;
-            } else
+            }
+            else
             {
                 msg += JsonUtility.ToJson(_data);
-            }    
+            }
         }
 
         msg += "\n";
@@ -97,50 +93,63 @@ public class WSClient : MonoBehaviour
 
     private void Update()
     {
-        if (ws == null) return;
+        if (ws == null)
+            return;
 
         lock (msgQueue.SyncRoot)
         {
-            foreach(var _msg in msgQueue)
+            foreach (var _msg in msgQueue)
             {
                 var msg = ((string)_msg).Split();
+
                 // メッセージの解析・処理
                 if (msg[1] == "ENDPERFORM")
                 {
                     isEndPerformed = true;
                     SceneManager.LoadScene("Select");
                 }
-
-                if (waitCalibrate)
+                else if (isPerformer && msg[1] == "CALIB_OK")
                 {
-                    if (isPerformer && msg[1] == "CALIB_OK")
+                    CustomDefault = JsonUtility.FromJson<CustomData>(msg[2]);
+                    if (waitCalibrate)
                     {
                         waitCalibrate = false;
-                        CustomDefault = JsonUtility.FromJson<CustomData>(msg[2]);
                         SceneManager.LoadScene("Customize");
-
-                    } else if (!isPerformer && msg[1] == "AR_OK")
+                    }
+                }
+                else if (!isPerformer && msg[1] == "AR_OK")
+                {
+                    arData = JsonUtility.FromJson<ARData>(msg[2]);
+                    if (waitCalibrate)
                     {
                         waitCalibrate = false;
-                        arData = JsonUtility.FromJson<ARData>(msg[2]);
                         SceneManager.LoadScene("AR");
-
                     }
-
-                } else if (!isPerformer && SceneManager.GetActiveScene().name == "AR" && GameObject.Find("EffectManager") != null)
-                {
-                    if (msg[1] == "GENEFF")
-                    {
-                        var effmgr = GameObject.Find("EffectManager").GetComponent<EffectManager>();
-                        effmgr.GenEffect(JsonUtility.FromJson<EffectData>(msg[2]));
-                    }
-
                 }
-                    
+                else if (!isPerformer && !waitCalibrate && msg[1] == "GENEFF" && GameObject.Find("EffectManager") != null)
+                {
+                    var effmgr = GameObject.Find("EffectManager").GetComponent<EffectManager>();
+                    effmgr.GenEffect(JsonUtility.FromJson<EffectData>(msg[2]));
+                }
+
             }
 
             msgQueue.Clear();
         }
+    }
+
+    private void OnApplicationPause(bool pauseStatus)
+    {
+        if (!pauseStatus)
+        {
+            // 復帰
+            if (!waitCalibrate && ws != null)
+            {
+                Send(isPerformer ? "CALIB" : "AR", null);
+            }
+
+        }
+
     }
 
     private void OnDestroy()
@@ -150,7 +159,7 @@ public class WSClient : MonoBehaviour
             ws.Close();
             ws = null;
         }
-        
+
     }
 
 }

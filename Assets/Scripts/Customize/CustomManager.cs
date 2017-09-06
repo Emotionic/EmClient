@@ -12,7 +12,7 @@ public class CustomManager : MonoBehaviour
     private CustomData customData;
 
     private Dictionary<string, GameObject> UIParts = new Dictionary<string, GameObject>();
-    private string[] ui_parts_name = { "General", "Other" };
+    private string[] ui_parts_name = { "ShareJoin", "Effect" };
     private GameObject oldPanel = null;
     private Image oldItem = null;
 
@@ -27,18 +27,24 @@ public class CustomManager : MonoBehaviour
     {
         if (isFirstSend)
         {
-            var panel = this.gameObject.transform.Find("Panel_General").transform;
-            panel.Find("ToggleDoShare").GetComponent<Toggle>().interactable = false;
-            panel.Find("BtnStart").GetComponent<Image>().color = new Color32(236, 255, 206, 255);
-            panel.Find("BtnStart").Find("Text").GetComponent<Text>().text = "適用";
-            panel.Find("BtnEnd").GetComponent<Button>().interactable = true;
-
-            isFirstSend = false;
+            UIChange_OnPerformStart();
         }
 
         // EmServerにカスタマイズ内容を送信
         if (ws != null)
         {
+            var shareJoin = UIParts["ShareJoin"].transform;
+            customData.DoShare = shareJoin.Find("ToggleDoShare").GetComponent<Toggle>().isOn;
+
+            var toggles_jointype = shareJoin.Find("Toggles_JoinType");
+            int joinType = 0;
+            if (toggles_jointype.Find("ToggleLike").GetComponent<Toggle>().isOn) joinType += 1;
+            if (toggles_jointype.Find("ToggleCrap").GetComponent<Toggle>().isOn) joinType += 10;
+            if (toggles_jointype.Find("ToggleKinect").GetComponent<Toggle>().isOn) joinType += 100;
+            customData.JoinType = joinType;
+
+            customData.EnabledEffects = shareJoin.Find("ScrollView_EnabledEffects").GetComponent<ChooseEffectsBehaviour>().GetEnableEffects();
+
             ws.Send("CUSTOMIZE", customData);
         }
 
@@ -86,22 +92,17 @@ public class CustomManager : MonoBehaviour
 	private void Start ()
     {
         InitUIParts();
-        ChangePanel("General");
+        ChangePanel("ShareJoin");
 
         if (GameObject.Find("WSClient") != null)
         {
             ws = GameObject.Find("WSClient").GetComponent<WSClient>();
             customData = ws.CustomDefault;
+            UIParts["ShareJoin"].transform.Find("ToggleDoShare").GetComponent<Toggle>().isOn = customData.DoShare;
 
             if (ws.isAuthenticated)
             {
-                var panel = this.gameObject.transform.Find("Panel_General").transform;
-                panel.Find("ToggleDoShare").GetComponent<Toggle>().interactable = false;
-                panel.Find("BtnStart").GetComponent<Image>().color = new Color32(236, 255, 206, 255);
-                panel.Find("BtnStart").Find("Text").GetComponent<Text>().text = "適用";
-                panel.Find("BtnEnd").GetComponent<Button>().interactable = true;
-
-                isFirstSend = false;
+                UIChange_OnPerformStart();
             }
 
         }
@@ -110,10 +111,17 @@ public class CustomManager : MonoBehaviour
 
     }
 
-    private void Update ()
+    private void UIChange_OnPerformStart()
     {
-		
-	}
+        var shareJoin = this.gameObject.transform.Find("Panel_ShareJoin").transform;
+        shareJoin.Find("ToggleDoShare").GetComponent<Toggle>().interactable = false;
+        var menu = this.gameObject.transform.Find("Menu").transform;
+        menu.Find("BtnStart").GetComponent<Image>().color = new Color32(236, 255, 206, 255);
+        menu.Find("BtnStart").Find("Text").GetComponent<Text>().text = "適用";
+        menu.Find("BtnEnd").GetComponent<Button>().interactable = true;
+
+        isFirstSend = false;
+    }
 
     private void InitUIParts()
     {

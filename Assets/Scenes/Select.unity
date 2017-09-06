@@ -1405,11 +1405,11 @@ MonoBehaviour:
   CalibWaitView: {fileID: 254874033}
   LabelBtn: {fileID: 659185029}
   LabelIPError: {fileID: 732530184}
+  LabelIP: {fileID: 539300712}
   LabelPinError: {fileID: 651696856}
   LabelQRError: {fileID: 2051867222}
   InputIP: {fileID: 1595152554}
   InputPin: {fileID: 288152024}
-  ToggleDoShare: {fileID: 0}
   QR: {fileID: 1112634895}
 --- !u!4 &691339447
 Transform:
@@ -2851,13 +2851,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 08b5267a602f92443898627ba8aafc0b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  customData:
+  CustomDefault:
     DoShare: 0
     JoinType: 0
+    EnabledEffects: []
   arData:
     MarkerPos: []
     MarkerScale: {x: 0, y: 0, z: 0}
     EnabledEffects: []
+  isAuthenticated: 0
 --- !u!1 &1738797233
 GameObject:
   m_ObjectHideFlags: 0

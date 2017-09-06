@@ -15,8 +15,20 @@ public class LikeButtonBehaviour : MonoBehaviour
 
     public void LikeButton_OnClick()
     {
-        // シーン遷移
-        SceneManager.LoadScene("Like");
+        if (GameObject.Find("WSClient").GetComponent<WSClient>().arData.isLikeEnabled)
+        {
+            // シーン遷移
+            SceneManager.LoadScene("Like");
+        } else
+        {
+            DialogManager.Instance.SetLabel("OK", "キャンセル", "閉じる");
+            DialogManager.Instance.ShowSubmitDialog(
+                "いいね機能は無効になっています。",
+                (ret) => {}
+            );
+        }
+
+        
 
     }
 

@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 
 public class SpriteLoader
 {
@@ -44,6 +45,16 @@ public class SpriteLoader
             return null;
 
         return m_dic[name];
+    }
+
+    /**
+     * Sprite名取得関数 
+     * @retval  ロードされたスプライト名のリスト(なければnull)
+     */
+    public List<string> GetSpritesName()
+    {
+        if (m_dic.Count() == 0) return null;
+        return m_dic.Keys.ToList();
     }
 
     public void Dispose()

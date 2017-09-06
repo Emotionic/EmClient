@@ -11,11 +11,11 @@ public class UIManager : MonoBehaviour
 
     public Text LabelBtn;
     public Text LabelIPError;
+    public Text LabelIP;
     public Text LabelPinError;
     public Text LabelQRError;
     public InputField InputIP;
     public InputField InputPin;
-    public Toggle ToggleDoShare;
 
     public QRReader QR;
 
@@ -80,6 +80,7 @@ public class UIManager : MonoBehaviour
         isCustomizeMode = false;
         LabelBtn.GetComponent<Text>().text = "接続";
         IPView.transform.Find("Image").GetComponent<Image>().color = EmotionicColor;
+        LabelIP.GetComponent<Text>().color = Color.black;
         LabelIPError.GetComponent<Text>().text = "";
 
         TransitionView("Forward", IPView);
@@ -91,6 +92,7 @@ public class UIManager : MonoBehaviour
         isCustomizeMode = true;
         LabelBtn.GetComponent<Text>().text = "次へ";
         IPView.transform.Find("Image").GetComponent<Image>().color = PerformerBlack;
+        LabelIP.GetComponent<Text>().color = Color.white;
         LabelIPError.GetComponent<Text>().text = "";
 
         TransitionView("Forward", IPView);
