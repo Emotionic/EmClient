@@ -8,6 +8,7 @@ public class CustomManager : MonoBehaviour
 {
     public Text Title;
     public CustomData customData;
+    public GameObject BtnWrite;
 
     private WSClient ws;
 
@@ -33,20 +34,7 @@ public class CustomManager : MonoBehaviour
         // EmServerにカスタマイズ内容を送信
         if (GameObject.Find("WSClient") != null && GameObject.Find("WSClient").GetComponent<WSClient>().isConnected)
         {
-            var shareJoin = UIParts["ShareJoin"].transform;
-            var effect = UIParts["Effect"].transform;
-            customData.DoShare = shareJoin.Find("ToggleDoShare").GetComponent<Toggle>().isOn;
-
-            var toggles_jointype = shareJoin.Find("Toggles_JoinType");
-            int joinType = 0;
-            if (toggles_jointype.Find("ToggleLike").GetComponent<Toggle>().isOn) joinType += 1;
-            if (toggles_jointype.Find("ToggleCrap").GetComponent<Toggle>().isOn) joinType += 10;
-            if (toggles_jointype.Find("ToggleKinect").GetComponent<Toggle>().isOn) joinType += 100;
-            customData.JoinType = joinType;
-
-            customData.EnabledLikes = shareJoin.Find("ScrollView_EnabledEffects").GetComponent<ChooseEffectsBehaviour>().GetEnableEffects();
-            customData.EffectsCustomize = effect.GetComponent<EffectUIManager>().GetEffectsCustomize();
-
+            MakeCustomData();
             ws.Send("CUSTOMIZE", customData);
         }
 
@@ -93,6 +81,11 @@ public class CustomManager : MonoBehaviour
 
 	private void Start ()
     {
+        if (Application.isEditor)
+        {
+            BtnWrite.SetActive(true);
+        }
+
         InitUIParts();
         ChangePanel("ShareJoin");
 
@@ -155,6 +148,34 @@ public class CustomManager : MonoBehaviour
         oldPanel = obj;
         oldItem = btn;
         
+    }
+
+    private void MakeCustomData()
+    {
+        var shareJoin = UIParts["ShareJoin"].transform;
+        var effect = UIParts["Effect"].transform;
+        customData.DoShare = shareJoin.Find("ToggleDoShare").GetComponent<Toggle>().isOn;
+
+        var toggles_jointype = shareJoin.Find("Toggles_JoinType");
+        int joinType = 0;
+        if (toggles_jointype.Find("ToggleLike").GetComponent<Toggle>().isOn)
+            joinType += 1;
+        if (toggles_jointype.Find("ToggleCrap").GetComponent<Toggle>().isOn)
+            joinType += 10;
+        if (toggles_jointype.Find("ToggleKinect").GetComponent<Toggle>().isOn)
+            joinType += 100;
+        customData.JoinType = joinType;
+
+        customData.EnabledLikes = shareJoin.Find("ScrollView_EnabledEffects").GetComponent<ChooseEffectsBehaviour>().GetEnableEffects();
+        customData.EffectsCustomize = effect.GetComponent<EffectUIManager>().GetEffectsCustomize();
+    }
+
+    public void BtnWrite_OnClicked()
+    {
+        MakeCustomData();
+        JsonLoader<CustomData>.Save(customData, "CustomDefaults.json");
+        Debug.Log("書き出しに成功しました。");
+        System.Diagnostics.Process.Start(System.Environment.CurrentDirectory);
     }
 
 }

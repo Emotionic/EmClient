@@ -39,6 +39,7 @@ public class EffectUIManager : MonoBehaviour
     private Dictionary<string, string> EffectList;
     private Dictionary<string, Color> ColorList;
 
+    private int currentTab = 0;
     private bool doNotProcessEvent = false;
     private float LogoTapStart;
 
@@ -50,9 +51,9 @@ public class EffectUIManager : MonoBehaviour
             var raw = ws.RequestHTTP(Method.GET, "options.json");
             var conf = JsonUtility.FromJson<CustomOptions>(raw);
 
-            GestureList = conf.Gesture.ToDictionary();
-            EffectList = conf.Effect.ToDictionary();
-            ColorList = conf.Color.ToDictionary();
+            GestureList = JsonUtility.FromJson<Serialization<string, string>>(conf.Gesture).ToDictionary();
+            EffectList = JsonUtility.FromJson<Serialization<string, string>>(conf.Effect).ToDictionary();
+            ColorList = JsonUtility.FromJson<Serialization<string, Color>>(conf.Color).ToDictionary();
         }
 
         if (GameObject.Find("DEMO") != null || GestureList == null) GestureList = new Dictionary<string, string> { { "スペシウム光線", "Spacium" }, { "左パンチ", "PanchLeft" }, { "右パンチ", "PanchRight" }, { "ジャンプ", "Jump" } };
@@ -141,17 +142,45 @@ public class EffectUIManager : MonoBehaviour
     public void DDColor_OnValueChanged()
     {
         // カスタマイズデータを変更
-        var gestureName = GestureList[DDPose.options[DDPose.value].text];
-        _EffectsCustomize[gestureName].Color = ColorList[DDColor.options[DDColor.value].text];
-        _EffectsCustomize[gestureName].isRainbow = DDColor.options[DDColor.value].text == "虹色";
+        if (currentTab == 1)
+        {
+            var gestureName = GestureList[DDPose.options[DDPose.value].text];
+            _EffectsCustomize[gestureName].Color = ColorList[DDColor.options[DDColor.value].text];
+            _EffectsCustomize[gestureName].isRainbow = DDColor.options[DDColor.value].text == "虹色";
+        } else if (currentTab == 2)
+        {
+            foreach(var toggle in TogglesPart)
+            {
+                if (toggle.isOn)
+                {
+                    var jt = toggle.GetComponent<ToggleAllocName>().JointName;
+                    _EffectsCustomize["Joint_" + jt].Color = ColorList[DDColor.options[DDColor.value].text];
+                    _EffectsCustomize["Joint_" + jt].isRainbow = DDColor.options[DDColor.value].text == "虹色";
+                }
+            }
+        }
     }
 
     public void SliderScale_OnValueChanged()
     {
         // カスタマイズデータを変更
-        var gestureName = GestureList[DDPose.options[DDPose.value].text];
         var scale = SliderScale.value;
-        _EffectsCustomize[gestureName].Scale = new Vector3(scale, scale);
+        if (currentTab == 1)
+        {
+            var gestureName = GestureList[DDPose.options[DDPose.value].text];
+            _EffectsCustomize[gestureName].Scale = new Vector3(scale, scale);
+        }
+        else if (currentTab == 2)
+        {
+            foreach (var toggle in TogglesPart)
+            {
+                if (toggle.isOn)
+                {
+                    var jt = toggle.GetComponent<ToggleAllocName>().JointName;
+                    _EffectsCustomize["Joint_" + jt].Scale = new Vector3(scale, scale);
+                }
+            }
+        }
     }
 
     public void BtnAllDelete_OnClicked()
@@ -178,6 +207,8 @@ public class EffectUIManager : MonoBehaviour
 
     public void Tab_SetEnable(int value)
     {
+        currentTab = value;
+
         var tabname = "Tab" + value.ToString("00");
         foreach (var tab in Tabs)
         {
@@ -230,6 +261,8 @@ public class EffectUIManager : MonoBehaviour
 
     public void Tab_SetDisable(int value)
     {
+        currentTab = 0;
+
         foreach (var tab in Tabs)
         {
             tab.SetActive(tab.name.Contains("_"));
@@ -269,9 +302,9 @@ public class EffectUIManager : MonoBehaviour
     [Serializable]
     public class CustomOptions
     {
-        public Serialization<string, string> Gesture;
-        public Serialization<string, string> Effect;
-        public Serialization<string, Color> Color;
+        public string Gesture;
+        public string Effect;
+        public string Color;
     }
 
 }
