@@ -6400,7 +6400,7 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls:
       - m_Target: {fileID: 1993776811}
-        m_MethodName: BtnStart_OnClicked
+        m_MethodName: BtnWrite_OnClicked
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -11455,6 +11455,7 @@ MonoBehaviour:
     JoinType: 0
     EnabledLikes: []
     EffectsCustomize: 
+  BtnWrite: {fileID: 969897565}
 --- !u!1 &1994986794
 GameObject:
   m_ObjectHideFlags: 0
