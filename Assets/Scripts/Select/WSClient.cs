@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -9,6 +10,7 @@ public class WSClient : MonoBehaviour
     public CustomData CustomDefault;
     public ARData arData;
     public bool isAuthenticated = false;
+    public string Addr = null;
 
     private WebSocket ws = null;
     private Queue msgQueue;
@@ -17,9 +19,9 @@ public class WSClient : MonoBehaviour
 
     private bool waitCalibrate = true;
 
-    public void Connect(string _addr, bool _performer, bool _isAuthenticated)
+    public void Connect(bool _performer, bool _isAuthenticated)
     {
-        ws = new WebSocket("ws://" + _addr + "/ws");
+        ws = new WebSocket("ws://" + Addr + "/ws");
         isPerformer = _performer;
         isAuthenticated = _isAuthenticated;
 
@@ -49,6 +51,11 @@ public class WSClient : MonoBehaviour
 
     }
 
+    public bool isConnected
+    {
+        get { return ws != null && ws.IsAlive; }
+    }
+
     public void Send(string _action, object _data)
     {
         string msg = "";
@@ -70,6 +77,51 @@ public class WSClient : MonoBehaviour
         msg += "\n";
 
         ws.Send(msg);
+    }
+
+    public string RequestHTTP(Method method, string action, string value = null)
+    {
+        string url = "http://" + Addr + "/" + action;
+
+        try
+        {
+            var wc = new System.Net.WebClient();
+            string resText = "";
+
+            switch (method)
+            {
+                case Method.GET:
+                    {
+                        byte[] resData = wc.DownloadData(url);
+                        resText = System.Text.Encoding.UTF8.GetString(resData);
+                    }
+                    break;
+
+                case Method.POST:
+                    {
+                        if (value == null)
+                            throw new ArgumentException();
+
+                        var ps = new System.Collections.Specialized.NameValueCollection();
+                        ps.Add("value", value);
+                        byte[] resData = wc.UploadValues(url, ps);
+                        resText = System.Text.Encoding.UTF8.GetString(resData);
+                    }
+                    break;
+
+                default:
+                    throw new ArgumentException();
+
+            }
+
+            wc.Dispose();
+
+            return resText;
+        }
+        catch (Exception)
+        {
+            return null;
+        }
     }
 
     private void Awake()
@@ -163,3 +215,10 @@ public class WSClient : MonoBehaviour
     }
 
 }
+
+public enum Method
+{
+    GET,
+    POST
+}
+

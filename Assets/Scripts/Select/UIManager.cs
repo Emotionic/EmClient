@@ -19,23 +19,22 @@ public class UIManager : MonoBehaviour
 
     public QRReader QR;
 
-    private string Address;
-    private string Pin;
+    private WSClient ws;
 
     private RectTransform rectTransition;
     private string TransitionState = "None";
     private const float TRANCOUNT = 0.5f;
     private float t;
 
-    private readonly Color PerformerBlack = new Color32(69, 69, 69, 255);
-    private readonly Color EmotionicColor = new Color32(213, 234, 251, 255);
-
     private bool isCustomizeMode;
     private QRReader _QR;
+    private bool isDemo = false;
+    private float LogoTapStart;
 
     private void Start()
     {
         _QR = QR.GetComponent<QRReader>();
+        ws = GameObject.Find("WSClient").GetComponent<WSClient>();
     }
 
     private void Update()
@@ -77,43 +76,46 @@ public class UIManager : MonoBehaviour
 
     public void BtnAR_OnClick()
     {
+        if (isDemo)
+        {
+            GameObject.Find("DEMO").GetComponent<DemoManager>().isCustomizeMode = false;
+            UnityEngine.SceneManagement.SceneManager.LoadScene("AR");
+        }
+
         isCustomizeMode = false;
         LabelBtn.GetComponent<Text>().text = "接続";
-        IPView.transform.Find("Image").GetComponent<Image>().color = EmotionicColor;
-        LabelIP.GetComponent<Text>().color = Color.black;
         LabelIPError.GetComponent<Text>().text = "";
 
         TransitionView("Forward", IPView);
-
     }
 
     public void BtnCustom_OnClick()
     {
+        if (isDemo)
+        {
+            GameObject.Find("DEMO").GetComponent<DemoManager>().isCustomizeMode = true;
+            UnityEngine.SceneManagement.SceneManager.LoadScene("Customize");
+        }
+
         isCustomizeMode = true;
         LabelBtn.GetComponent<Text>().text = "次へ";
-        IPView.transform.Find("Image").GetComponent<Image>().color = PerformerBlack;
-        LabelIP.GetComponent<Text>().color = Color.white;
         LabelIPError.GetComponent<Text>().text = "";
 
         TransitionView("Forward", IPView);
-
     }
 
     public void BtnBack_OnClick()
     {
         TransitionView("Back", IPView);
-
     }
 
     public void BtnIP_OnClick()
     {
-        Address = InputIP.GetComponent<InputField>().text;
-        if (Address == "")
-            Address = "localhost";
+        ws.Addr = InputIP.GetComponent<InputField>().text;
         LabelPinError.GetComponent<Text>().text = "接続中です...";
         Canvas.ForceUpdateCanvases();
 
-        var res = CallServer("check");
+        var res = ws.RequestHTTP(Method.GET, "check");
         if (res == null)
         {
             // 接続不可
@@ -131,7 +133,7 @@ public class UIManager : MonoBehaviour
 
         // キャリブレーション待機画面へ
         TransitionView("Forward", CalibWaitView);
-        GameObject.Find("WSClient").GetComponent<WSClient>().Connect(Address, isCustomizeMode, res == "authenticated");
+        ws.Connect(isCustomizeMode, res == "authenticated");
 
     }
 
@@ -140,9 +142,9 @@ public class UIManager : MonoBehaviour
         // Pin入力完了
         LabelPinError.GetComponent<Text>().text = "確認中です...";
         Canvas.ForceUpdateCanvases();
-        Pin = InputPin.GetComponent<InputField>().text;
+        var pin = InputPin.GetComponent<InputField>().text;
 
-        var res = CallServer("pin");
+        var res = ws.RequestHTTP(Method.POST, "pin", pin);
         if (res == null)
         {
             // 接続エラー
@@ -157,7 +159,30 @@ public class UIManager : MonoBehaviour
         }
 
         TransitionView("Forward", CalibWaitView);
-        GameObject.Find("WSClient").GetComponent<WSClient>().Connect(Address, true, false);
+        ws.Connect(true, false);
+
+    }
+
+    public void Logo_OnPointerDown()
+    {
+        LogoTapStart = Time.time;
+        Debug.Log("Logo_OnPointerDown");
+    }
+
+    public void Logo_OnPointerUp()
+    {
+        Debug.Log("Logo_OnPointerUp");
+        if (Time.time - LogoTapStart >= 3.0f)
+        {
+            isDemo = true;
+
+            var demo = new GameObject("DEMO");
+            demo.AddComponent<DemoManager>();
+
+            ModeView.transform.Find("Image").GetComponent<Image>().color = new Color32(69, 69, 69, 255);
+            ModeView.transform.Find("Text").GetComponent<Text>().color = Color.white;
+            TransitionView("Forward", ModeView);
+        }
 
     }
 
@@ -165,11 +190,11 @@ public class UIManager : MonoBehaviour
     {
         _QR.CamStop();
 
-        Address = _data.IP;
+        ws.Addr = _data.IP;
         LabelQRError.GetComponent<Text>().text = "接続中です...";
         Canvas.ForceUpdateCanvases();
 
-        var res = CallServer("check");
+        var res = ws.RequestHTTP(Method.GET, "check");
         if (res == null)
         {
             // 接続不可
@@ -185,9 +210,9 @@ public class UIManager : MonoBehaviour
             LabelQRError.GetComponent<Text>().color = new Color32(0, 0, 0, 255);
             LabelQRError.GetComponent<Text>().text = "確認中です...";
             Canvas.ForceUpdateCanvases();
-            Pin = _data.PIN;
+            var pin = _data.PIN;
 
-            res = CallServer("pin");
+            res = ws.RequestHTTP(Method.POST, "pin", pin);
             if (res != "ok")
             {
                 // 不正なPIN
@@ -200,7 +225,7 @@ public class UIManager : MonoBehaviour
 
         // キャリブレーション・接続待機画面へ
         TransitionView("Forward", CalibWaitView);
-        GameObject.Find("WSClient").GetComponent<WSClient>().Connect(Address, _data.isPerformer, res == "authenticated");
+        ws.Connect(_data.isPerformer, res == "authenticated");
 
     }
 
@@ -211,42 +236,6 @@ public class UIManager : MonoBehaviour
             TransitionState = _state;
             rectTransition = _view.GetComponent<RectTransform>();
             t = TRANCOUNT;
-        }
-    }
-
-    private string CallServer(string action)
-    {
-        string url = "http://" + Address + "/" + action;
-
-        try
-        {
-            var wc = new System.Net.WebClient();
-
-            string resText = "";
-            if (action == "check")
-            {
-                byte[] resData = wc.DownloadData(url);
-                resText = System.Text.Encoding.UTF8.GetString(resData);
-            }
-            else if (action == "pin")
-            {
-                var ps = new System.Collections.Specialized.NameValueCollection();
-                ps.Add("pin", Pin);
-                byte[] resData = wc.UploadValues(url, ps);
-                resText = System.Text.Encoding.UTF8.GetString(resData);
-            }
-            else
-            {
-                throw new Exception();
-            }
-
-            wc.Dispose();
-
-            return resText;
-        }
-        catch (Exception)
-        {
-            return null;
         }
     }
 

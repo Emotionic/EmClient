@@ -7,9 +7,9 @@ using UnityEngine.SceneManagement;
 public class CustomManager : MonoBehaviour
 {
     public Text Title;
+    public CustomData customData;
 
     private WSClient ws;
-    private CustomData customData;
 
     private Dictionary<string, GameObject> UIParts = new Dictionary<string, GameObject>();
     private string[] ui_parts_name = { "ShareJoin", "Effect" };
@@ -31,9 +31,10 @@ public class CustomManager : MonoBehaviour
         }
 
         // EmServerにカスタマイズ内容を送信
-        if (ws != null)
+        if (GameObject.Find("WSClient") != null && GameObject.Find("WSClient").GetComponent<WSClient>().isConnected)
         {
             var shareJoin = UIParts["ShareJoin"].transform;
+            var effect = UIParts["Effect"].transform;
             customData.DoShare = shareJoin.Find("ToggleDoShare").GetComponent<Toggle>().isOn;
 
             var toggles_jointype = shareJoin.Find("Toggles_JoinType");
@@ -43,7 +44,8 @@ public class CustomManager : MonoBehaviour
             if (toggles_jointype.Find("ToggleKinect").GetComponent<Toggle>().isOn) joinType += 100;
             customData.JoinType = joinType;
 
-            customData.EnabledEffects = shareJoin.Find("ScrollView_EnabledEffects").GetComponent<ChooseEffectsBehaviour>().GetEnableEffects();
+            customData.EnabledLikes = shareJoin.Find("ScrollView_EnabledEffects").GetComponent<ChooseEffectsBehaviour>().GetEnableEffects();
+            customData.EffectsCustomize = effect.GetComponent<EffectUIManager>().GetEffectsCustomize();
 
             ws.Send("CUSTOMIZE", customData);
         }
@@ -94,7 +96,7 @@ public class CustomManager : MonoBehaviour
         InitUIParts();
         ChangePanel("ShareJoin");
 
-        if (GameObject.Find("WSClient") != null)
+        if (GameObject.Find("WSClient") != null && GameObject.Find("WSClient").GetComponent<WSClient>().isConnected)
         {
             ws = GameObject.Find("WSClient").GetComponent<WSClient>();
             customData = ws.CustomDefault;
