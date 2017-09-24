@@ -1,6 +1,7 @@
 ﻿using System;
 using UnityEngine;
 using UnityEngine.UI;
+using Newtonsoft.Json;
 
 public class UIManager : MonoBehaviour
 {
@@ -29,10 +30,14 @@ public class UIManager : MonoBehaviour
     private bool isCustomizeMode;
     private QRReader _QR;
     private bool isDemo = false;
-    private float LogoTapStart;
+    private int _LogoTapCount = 0;
+    private float _LogoTapped;
 
     private void Start()
     {
+        // 縦画面にする
+        Screen.orientation = ScreenOrientation.Portrait;
+
         _QR = QR.GetComponent<QRReader>();
         ws = GameObject.Find("WSClient").GetComponent<WSClient>();
     }
@@ -41,7 +46,7 @@ public class UIManager : MonoBehaviour
     {
         if (_QR.isDetecting && !string.IsNullOrEmpty(_QR.Result) && _QR.Result != "error")
         {
-            var qrdata = JsonUtility.FromJson<QRData>(_QR.Result);
+            var qrdata = JsonConvert.DeserializeObject<QRData>(_QR.Result);
             ProcessQR(qrdata);
         }
 
@@ -112,7 +117,7 @@ public class UIManager : MonoBehaviour
     public void BtnIP_OnClick()
     {
         ws.Addr = InputIP.GetComponent<InputField>().text;
-        LabelPinError.GetComponent<Text>().text = "接続中です...";
+        LabelIPError.GetComponent<Text>().text = "接続中です...";
         Canvas.ForceUpdateCanvases();
 
         var res = ws.RequestHTTP(Method.GET, "check");
@@ -163,27 +168,27 @@ public class UIManager : MonoBehaviour
 
     }
 
-    public void Logo_OnPointerDown()
+    public void Logo_OnPointerClicked()
     {
-        LogoTapStart = Time.time;
-        Debug.Log("Logo_OnPointerDown");
-    }
-
-    public void Logo_OnPointerUp()
-    {
-        Debug.Log("Logo_OnPointerUp");
-        if (Time.time - LogoTapStart >= 3.0f)
+        if (Time.time - _LogoTapped >= 3.0f)
+            _LogoTapCount = 0;
+        else
         {
-            isDemo = true;
+            _LogoTapCount++;
+            if (_LogoTapCount >= 3)
+            {
+                isDemo = true;
 
-            var demo = new GameObject("DEMO");
-            demo.AddComponent<DemoManager>();
+                var demo = new GameObject("DEMO");
+                demo.AddComponent<DemoManager>();
 
-            ModeView.transform.Find("Image").GetComponent<Image>().color = new Color32(69, 69, 69, 255);
-            ModeView.transform.Find("Text").GetComponent<Text>().color = Color.white;
-            TransitionView("Forward", ModeView);
+                ModeView.transform.Find("Image").GetComponent<Image>().color = new Color32(69, 69, 69, 255);
+                ModeView.transform.Find("Text").GetComponent<Text>().color = Color.white;
+                TransitionView("Forward", ModeView);
+            }
         }
 
+        _LogoTapped = Time.time;
     }
 
     private void ProcessQR(QRData _data)

@@ -1,27 +1,44 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.UI;
 using UnityEngine.SceneManagement;
+using UnityEngine.UI;
 
 public class CustomManager : MonoBehaviour
 {
     public Text Title;
     public CustomData customData;
-    public GameObject BtnWrite;
+    public GameObject Item_Debug;
 
     private WSClient ws;
 
     private Dictionary<string, GameObject> UIParts = new Dictionary<string, GameObject>();
-    private string[] ui_parts_name = { "ShareJoin", "Effect" };
+    private string[] ui_parts_name = { "General", "ShareJoin", "Effect", "Debug" };
+    private Dictionary<string, string> titles = new Dictionary<string, string>()
+    {
+        { "General", "全般" },
+        { "ShareJoin", "共有・観客参加" },
+        { "Effect", "動きを選択" },
+        { "Debug", "*** デバッグ ***" }
+    };
+
     private GameObject oldPanel = null;
     private Image oldItem = null;
 
     private bool isFirstSend = true;
+    private float _LogoTapped;
+    private int _LogoTapCount = 0;
+
+    private bool interactable = true;
+
+    public void ChangeMenuTabsInteractable(bool _interactable)
+    {
+        interactable = _interactable;
+    }
 
     public void ItemClicked(string name)
     {
-        ChangePanel(name);
+        if (interactable)
+            ChangePanel(name);
     }
 
     public void BtnStart_OnClicked()
@@ -35,7 +52,7 @@ public class CustomManager : MonoBehaviour
         if (GameObject.Find("WSClient") != null && GameObject.Find("WSClient").GetComponent<WSClient>().isConnected)
         {
             MakeCustomData();
-            ws.Send("CUSTOMIZE", customData);
+            ws.Send("CUSTOMIZE", customData, true);
         }
 
         Debug.Log("Sent CUSTOMIZE");
@@ -53,13 +70,12 @@ public class CustomManager : MonoBehaviour
                     CloseEmotionic();
                 }
             });
-        } else
+        }
+        else
         {
             Debug.Log("Omit dialog. Closing Emotionic.");
             CloseEmotionic();
-
         }
-
     }
 
     private void CloseEmotionic()
@@ -79,15 +95,13 @@ public class CustomManager : MonoBehaviour
 
     }
 
-	private void Start ()
+    private void Start()
     {
-        if (Application.isEditor)
-        {
-            BtnWrite.SetActive(true);
-        }
+        //横画面にする
+        Screen.orientation = ScreenOrientation.LandscapeLeft;
 
         InitUIParts();
-        ChangePanel("ShareJoin");
+        ChangePanel("General");
 
         if (GameObject.Find("WSClient") != null && GameObject.Find("WSClient").GetComponent<WSClient>().isConnected)
         {
@@ -108,8 +122,10 @@ public class CustomManager : MonoBehaviour
 
     private void UIChange_OnPerformStart()
     {
-        var shareJoin = this.gameObject.transform.Find("Panel_ShareJoin").transform;
-        shareJoin.Find("ToggleDoShare").GetComponent<Toggle>().interactable = false;
+        var general = this.gameObject.transform.Find("Panel_General").transform;
+        general.Find("ToggleDoShare").GetComponent<Toggle>().interactable = false;
+        general.Find("InputLimit").GetComponent<InputField>().interactable = false;
+
         var menu = this.gameObject.transform.Find("Menu").transform;
         menu.Find("BtnStart").GetComponent<Image>().color = new Color32(236, 255, 206, 255);
         menu.Find("BtnStart").Find("Text").GetComponent<Text>().text = "適用";
@@ -120,7 +136,7 @@ public class CustomManager : MonoBehaviour
 
     private void InitUIParts()
     {
-        foreach(var name in ui_parts_name)
+        foreach (var name in ui_parts_name)
         {
             var obj = this.gameObject.transform.Find("Panel_" + name);
             if (obj != null)
@@ -133,21 +149,24 @@ public class CustomManager : MonoBehaviour
 
     private void ChangePanel(string _name)
     {
-        if (!UIParts.ContainsKey(_name)) return;
-        if (oldPanel != null) oldPanel.SetActive(false);
-        if (oldItem != null) oldItem.color = Color.white;
+        if (!UIParts.ContainsKey(_name))
+            return;
+        if (oldPanel != null)
+            oldPanel.SetActive(false);
+        if (oldItem != null && oldPanel.name != "Panel_Debug")
+            oldItem.color = Color.white;
 
         var obj = this.gameObject.transform.Find("Panel_" + _name).gameObject;
         obj.SetActive(true);
         var menu = this.gameObject.transform.Find("Menu");
         var btn = menu.Find("Item_" + _name).Find("Background").GetComponent<Image>();
-        btn.color = new Color32(213, 234, 251, 255);
-        var label = menu.Find("Item_" + _name).Find("Text").GetComponent<Text>();
-        Title.GetComponent<Text>().text = label.text;
+        if (_name != "Debug")
+            btn.color = new Color32(213, 234, 251, 255);
+        Title.text = titles[_name];
 
         oldPanel = obj;
         oldItem = btn;
-        
+
     }
 
     private void MakeCustomData()
@@ -167,15 +186,23 @@ public class CustomManager : MonoBehaviour
         customData.JoinType = joinType;
 
         customData.EnabledLikes = shareJoin.Find("ScrollView_EnabledEffects").GetComponent<ChooseEffectsBehaviour>().GetEnableEffects();
-        customData.EffectsCustomize = effect.GetComponent<EffectUIManager>().GetEffectsCustomize();
+        customData.EffectsCustomize = effect.GetComponent<EffectCustomUI>().EffectsCustomize;
     }
 
-    public void BtnWrite_OnClicked()
+    public void Logo_OnPointerClicked()
     {
-        MakeCustomData();
-        JsonLoader<CustomData>.Save(customData, "CustomDefaults.json");
-        Debug.Log("書き出しに成功しました。");
-        System.Diagnostics.Process.Start(System.Environment.CurrentDirectory);
+        if (Time.time - _LogoTapped >= 3.0f)
+            _LogoTapCount = 0;
+        else
+        {
+            _LogoTapCount++;
+            if (_LogoTapCount >= 3)
+            {
+                Item_Debug.SetActive(true);
+            }
+        }
+
+        _LogoTapped = Time.time;
     }
 
 }

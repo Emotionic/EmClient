@@ -14,8 +14,8 @@ public class EffectManager : MonoBehaviour
     /// </summary>
     public void GenEffect(EffectData _eff)
     {
-        // 実装中...
-        Debug.Log("GenEffect() が呼び出されました。");
+        PlayEffect(_eff);
+
     }
 
     /// <summary>

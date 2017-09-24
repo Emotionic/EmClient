@@ -26,6 +26,7 @@ public class GaugeManager : MonoBehaviour
     private const int level = 10; // 何段階あるか
     private int current_lv = 0; // 今何段階目か
     private bool confirmed = false; // 最初のダイアログが閉じられた
+    private bool hasFocus = true;
 
     private Image gauge_bg;
 
@@ -60,6 +61,11 @@ public class GaugeManager : MonoBehaviour
         }
     }
 
+    public void Test()
+    {
+        Debug.Log("aaaaa");
+    }
+
     private void Start()
     {
         // シェイク初期化
@@ -73,7 +79,8 @@ public class GaugeManager : MonoBehaviour
         {
             DialogManager.Instance.SetLabel("OK", "キャンセル", "閉じる");
             DialogManager.Instance.ShowSubmitDialog("スマホを振って「いいね！」を送りましょう！", (ret) => { confirmed = true; });
-        } else
+        }
+        else
         {
             confirmed = true;
         }
@@ -101,4 +108,15 @@ public class GaugeManager : MonoBehaviour
         }
 
     }
+
+    private void OnApplicationFocus(bool _hasFocus)
+    {
+        if (!hasFocus && _hasFocus && !confirmed)
+        {
+            confirmed = true;
+        }
+
+        hasFocus = _hasFocus;
+    }
+
 }

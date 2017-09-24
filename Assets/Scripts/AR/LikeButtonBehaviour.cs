@@ -1,8 +1,5 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.SceneManagement;
-using UnityEngine.UI;
 
 public class LikeButtonBehaviour : MonoBehaviour
 {
@@ -15,7 +12,7 @@ public class LikeButtonBehaviour : MonoBehaviour
 
     public void LikeButton_OnClick()
     {
-        if (GameObject.Find("WSClient").GetComponent<WSClient>().arData.isLikeEnabled)
+        if (GameObject.Find("DEMO") != null || GameObject.Find("WSClient").GetComponent<WSClient>().arData.isLikeEnabled)
         {
             // シーン遷移
             SceneManager.LoadScene("Like");

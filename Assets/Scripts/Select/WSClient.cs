@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using Newtonsoft.Json;
 using WebSocketSharp;
 
 public class WSClient : MonoBehaviour
@@ -56,7 +57,7 @@ public class WSClient : MonoBehaviour
         get { return ws != null && ws.IsAlive; }
     }
 
-    public void Send(string _action, object _data)
+    public void Send(string _action, object _data, bool _serializeUsingJsonNET = false)
     {
         string msg = "";
         msg += "SERV\n";
@@ -70,7 +71,14 @@ public class WSClient : MonoBehaviour
             }
             else
             {
-                msg += JsonUtility.ToJson(_data);
+                if (_serializeUsingJsonNET)
+                {
+                    msg += JsonConvert.SerializeObject(_data, Formatting.None);
+                }
+                else
+                {
+                    msg += JsonUtility.ToJson(_data);
+                }
             }
         }
 

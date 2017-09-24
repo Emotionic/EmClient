@@ -11,9 +11,9 @@ public class ChooseEffectsBehaviour : MonoBehaviour
     private SpriteLoader sploader;
     private Dictionary<string, bool> Effects;
 
-    public string[] GetEnableEffects()
+    public List<string> GetEnableEffects()
     {
-        return Effects.Where(eff => eff.Value).Select(eff => eff.Key).ToArray();
+        return Effects.Where(eff => eff.Value).Select(eff => eff.Key).ToList();
     }
 
     private void Start()
@@ -26,12 +26,10 @@ public class ChooseEffectsBehaviour : MonoBehaviour
         var parent = this.transform.Find("Viewport").Find("Content");
         var effectNames = sploader.GetSpritesName();
         Effects = effectNames.ToDictionary(eff => eff, val => true);
-        var y = 0;
         foreach (var name in effectNames)
         {
             var item = Object.Instantiate(Template, parent) as GameObject;
             item.SetActive(true);
-            item.transform.Translate(0, y, 0);
             var image = item.transform.Find("Image").GetComponent<Image>();
             image.sprite = sploader.GetSprite(name);
             image.color = Color.black;
@@ -39,8 +37,6 @@ public class ChooseEffectsBehaviour : MonoBehaviour
             {
                 Effects[name] = value;
             });
-
-            y -= 150;
         }
 
     }

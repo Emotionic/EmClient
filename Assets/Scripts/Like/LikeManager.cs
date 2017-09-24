@@ -32,12 +32,22 @@ public class LikeManager : MonoBehaviour
     private SpriteLoader sploader;
 
     private bool dialogShown = false;
+    private bool hasFocus = true;
 
     public void DoTransition()
     {
-        var wsclient = GameObject.Find("WSClient").GetComponent<WSClient>();
-        int idx = Random.Range(0, wsclient.arData.EnabledEffects.Length);
-        effectName = wsclient.arData.EnabledEffects[idx];
+        if (GameObject.Find("DEMO") != null)
+        {
+            var list = sploader.GetSpritesName();
+            int idx = Random.Range(0, list.Count);
+            effectName = list[idx];
+        } else
+        {
+            var wsclient = GameObject.Find("WSClient").GetComponent<WSClient>();
+            int idx = Random.Range(0, wsclient.arData.EnabledEffects.Count);
+            effectName = wsclient.arData.EnabledEffects[idx];
+        }
+        
         Debug.Log(effectName);
         currentColor = Random.Range(0, 4);
 
@@ -145,13 +155,17 @@ public class LikeManager : MonoBehaviour
             {
                 moveEffect = false;
 
-                // いいね！の送信
-                var data = new LikeData(effectName, colors[currentColor]);
-                GameObject.Find("WSClient").GetComponent<WSClient>().Send("LIKE", data);
+                if (GameObject.Find("DEMO") == null)
+                {
+                    // いいね！の送信
+                    var data = new LikeData(effectName, colors[currentColor]);
+                    GameObject.Find("WSClient").GetComponent<WSClient>().Send("LIKE", data);
+                }
 
                 // ダイアログの表示と画面遷移
                 ReLike = true;
                 dialogShown = true;
+
                 DialogManager.Instance.SetLabel("OK", "キャンセル", "閉じる");
                 DialogManager.Instance.ShowSubmitDialog(
                     "いいね！を送信しました。",
@@ -161,6 +175,16 @@ public class LikeManager : MonoBehaviour
             }
         }
 
+    }
+
+    private void OnApplicationFocus(bool _hasFocus)
+    {
+        if (!hasFocus && _hasFocus && dialogShown)
+        {
+            SceneManager.LoadScene("Like");
+        }
+
+        hasFocus = _hasFocus;
     }
 
 }
