@@ -59,15 +59,19 @@ public class EffectCustomUI : MonoBehaviour
         {
             { "常時", Gesture.Always},
             { "ジャンプ", Gesture.Jump },
-            { "スペシウム高専", Gesture.Specium }
+            { "スペシウム光線", Gesture.Specium },
+            { "パンチ", Gesture.Punch },
+            { "ラジオ体操", Gesture.Exercise }
         };
 
         ColorList = new Dictionary<string, Color32>()
         {
             { "赤", Color.red },
             { "青", Color.blue },
+            { "緑", Color.green },
             { "黄", Color.yellow },
-            { "緑", Color.green }
+            { "白", Color.white },
+            { "虹色", Color.black }
         };
 
         EffectList = new Dictionary<string, Effect>()
@@ -75,9 +79,9 @@ public class EffectCustomUI : MonoBehaviour
             { "ラインエフェクト", Effect.Line },
             { "ビーム", Effect.Beam },
             { "パンチエフェクト", Effect.Punch },
-            { "波紋", Effect.Ripple }
+            { "波紋", Effect.Ripple },
+            { "爆発", Effect.Impact }
         };
-
 
         ReloadUI();
     }

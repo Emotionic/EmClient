@@ -5,16 +5,61 @@ using UnityEngine;
 
 public class EffectManager : MonoBehaviour
 {
-    // ====================
-    // PUBLIC
-    // ====================
+    public GameObject Trail;
+
+    private RainbowColor _RbColor;
 
     /// <summary>
-    /// AR情報からエフェクトを生成するための情報を計算し、エフェクトを生成します。
+    /// AR情報からエフェクトを生成します。
     /// </summary>
     public void GenEffect(EffectData _eff)
     {
-        PlayEffect(_eff);
+        if (_eff.Name.StartsWith("LINE"))
+        {
+            // ラインエフェクトの生成
+
+            Transform trail;
+            var jointObj = GameObject.Find(_eff.Name).transform;
+            jointObj.transform.position = _eff.Position;
+            jointObj.transform.localRotation = _eff.Rotation;
+            jointObj.transform.localScale = _eff.Scale;
+
+            if (!jointObj.Find(Trail.name))
+            {
+                Instantiate(Trail, jointObj).name = "Trail";
+            }
+
+            trail = jointObj.Find(Trail.name);
+            TrailRenderer tr = trail.GetComponent<TrailRenderer>();
+            ParticleSystem[] pss =
+                {
+                    trail.Find("Hand Particle").GetComponent<ParticleSystem>(),
+                    trail.Find("NG Hand Particle").GetComponent<ParticleSystem>()
+                    };
+
+            if (_eff.IsRainbow)
+            {
+                tr.startColor = _RbColor.Rainbow;
+                foreach (ParticleSystem ps in pss)
+                {
+                    ps.startColor = _RbColor.Rainbow;
+                }
+            }
+            else
+            {
+                tr.startColor = _eff.Color;
+                foreach (ParticleSystem ps in pss)
+                {
+                    ps.startColor = _eff.Color;
+                }
+            }
+
+        }
+        else
+        {
+            PlayEffect(_eff);
+
+        }
 
     }
 
@@ -33,7 +78,7 @@ public class EffectManager : MonoBehaviour
         Play(effobj);
 
     }
-    
+
     // ====================
     // PRIVATE
     // ====================
@@ -47,6 +92,7 @@ public class EffectManager : MonoBehaviour
     private void Awake()
     {
         effects = new List<EffectObject>();
+        _RbColor = new RainbowColor(0, 0.001f);
     }
 
     private void Update()
@@ -78,8 +124,20 @@ public class EffectManager : MonoBehaviour
                 }
             }
 
+            // 使い終わったGameObjectの破棄
+            foreach(var eff in effects)
+            {
+                if (eff.Handle == null)
+                {
+                    Destroy(eff.Target);
+                }
+            }
+
+            // リストから削除
             effects.RemoveAll(eff => eff.Handle == null);
         }
+
+        _RbColor.Update();
 
     }
 
