@@ -54,16 +54,10 @@ public class GaugeManager : MonoBehaviour
         else if ((count / threshould) > current_lv)
         {
             current_lv++;
-            // this.GetComponent<PlayWave>().Play((PlayState)(current_lv + 3));
             this.GetComponent<AudioSource>().pitch = 1.0f + current_lv * Pitch_diff;
             this.GetComponent<AudioSource>().PlayOneShot(FillingSE, 1.0f);
 
         }
-    }
-
-    public void Test()
-    {
-        Debug.Log("aaaaa");
     }
 
     private void Start()
@@ -72,6 +66,12 @@ public class GaugeManager : MonoBehaviour
         lowPassValue = Input.acceleration;
 
         gauge_bg = this.transform.Find("gauge_bg").GetComponent<Image>();
+
+        // SEの読込
+        var se_name = GameObject.Find("LocalSettings").GetComponent<LocalSettingsManager>().localSettings.ChargedSE;
+        ChargedSE = (AudioClip)Resources.Load("LikeSE/" + se_name);
+        se_name = GameObject.Find("LocalSettings").GetComponent<LocalSettingsManager>().localSettings.FillingSE;
+        FillingSE = (AudioClip)Resources.Load("LikeSE/" + se_name);
 
         // ダイアログの表示
         confirmed = false;

@@ -8,10 +8,10 @@ using WebSocketSharp;
 
 public class WSClient : MonoBehaviour
 {
-    public CustomData CustomDefault;
     public ARData arData;
     public bool isAuthenticated = false;
     public string Addr = null;
+    public string EnabledJoinTypes = null;
 
     private WebSocket ws = null;
     private Queue msgQueue;
@@ -167,13 +167,14 @@ public class WSClient : MonoBehaviour
                 {
                     isEndPerformed = true;
                     SceneManager.LoadScene("Select");
+                    Destroy(this);
                 }
                 else if (isPerformer && msg[1] == "CALIB_OK")
                 {
-                    CustomDefault = JsonUtility.FromJson<CustomData>(msg[2]);
                     if (waitCalibrate)
                     {
                         waitCalibrate = false;
+                        EnabledJoinTypes = msg[2];
                         SceneManager.LoadScene("Customize");
                     }
                 }
@@ -183,13 +184,13 @@ public class WSClient : MonoBehaviour
                     if (waitCalibrate)
                     {
                         waitCalibrate = false;
-                        SceneManager.LoadScene("AR");
+                        SceneManager.LoadScene("Like");
                     }
                 }
                 else if (!isPerformer && !waitCalibrate && msg[1] == "GENEFF" && GameObject.Find("EffectManager") != null)
                 {
                     var effmgr = GameObject.Find("EffectManager").GetComponent<EffectManager>();
-                    effmgr.GenEffect(JsonUtility.FromJson<EffectData>(msg[2]));
+                    effmgr.GenEffect(JsonUtility.FromJson<EffectData>(msg[2]), false);
                 }
 
             }

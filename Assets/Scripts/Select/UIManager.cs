@@ -5,21 +5,21 @@ using Newtonsoft.Json;
 
 public class UIManager : MonoBehaviour
 {
-    public GameObject ModeView;
-    public GameObject IPView;
+    public GameObject QRView;
+    public GameObject IPModeView;
     public GameObject PinView;
     public GameObject CalibWaitView;
+    public GameObject Blocker;
 
-    public Text LabelBtn;
-    public Text LabelIPError;
-    public Text LabelIP;
-    public Text LabelPinError;
-    public Text LabelQRError;
-    public InputField InputIP;
-    public InputField InputPin;
+    private Text _LabelQR;
+    private Text _LabelIPMode;
+    private Text _LabelPin;
+    private InputField _InputIP;
+    private InputField _InputPin;
+
+    public Text LabelVersion;
 
     public QRReader QR;
-
     private WSClient ws;
 
     private RectTransform rectTransition;
@@ -29,9 +29,14 @@ public class UIManager : MonoBehaviour
 
     private bool isCustomizeMode;
     private QRReader _QR;
+
+    // テスト用
     private bool isDemo = false;
     private int _LogoTapCount = 0;
     private float _LogoTapped;
+    private int _VersionTapCount = 0;
+    private float _VersionTapped;
+    private int _CurrentPage = 0;
 
     private void Start()
     {
@@ -40,6 +45,17 @@ public class UIManager : MonoBehaviour
 
         _QR = QR.GetComponent<QRReader>();
         ws = GameObject.Find("WSClient").GetComponent<WSClient>();
+
+        // バージョン情報の表示
+        LabelVersion.text = "Ver. " + Application.version;
+
+        // UIパーツの取得
+        _LabelIPMode = IPModeView.transform.Find("Text").GetComponent<Text>();
+        _LabelPin = PinView.transform.Find("Text").GetComponent<Text>();
+        _LabelQR = QRView.transform.Find("Text").GetComponent<Text>();
+        _InputIP = IPModeView.transform.Find("InputField").GetComponent<InputField>();
+        _InputPin = PinView.transform.Find("InputField").GetComponent<InputField>();
+
     }
 
     private void Update()
@@ -75,56 +91,33 @@ public class UIManager : MonoBehaviour
 
     public void BtnMode_OnClick()
     {
-        _QR.CamStop();
-        TransitionView("Forward", ModeView);
+        // QR -> IPMode
+        if (_QR.isDetecting) _QR.CamStop();
+        TransitionView("Forward", IPModeView);
     }
 
-    public void BtnAR_OnClick()
+    public void BtnModeIP_OnClick(bool _isPerformer)
     {
         if (isDemo)
         {
-            GameObject.Find("DEMO").GetComponent<DemoManager>().isCustomizeMode = false;
-            UnityEngine.SceneManagement.SceneManager.LoadScene("AR");
+            GameObject.Find("DEMO").GetComponent<DemoManager>().isCustomizeMode = _isPerformer;
+            UnityEngine.SceneManagement.SceneManager.LoadScene(_isPerformer ? "Customize" : "Like");
+            return;
         }
 
-        isCustomizeMode = false;
-        LabelBtn.GetComponent<Text>().text = "接続";
-        LabelIPError.GetComponent<Text>().text = "";
-
-        TransitionView("Forward", IPView);
-    }
-
-    public void BtnCustom_OnClick()
-    {
-        if (isDemo)
-        {
-            GameObject.Find("DEMO").GetComponent<DemoManager>().isCustomizeMode = true;
-            UnityEngine.SceneManagement.SceneManager.LoadScene("Customize");
-        }
-
-        isCustomizeMode = true;
-        LabelBtn.GetComponent<Text>().text = "次へ";
-        LabelIPError.GetComponent<Text>().text = "";
-
-        TransitionView("Forward", IPView);
-    }
-
-    public void BtnBack_OnClick()
-    {
-        TransitionView("Back", IPView);
-    }
-
-    public void BtnIP_OnClick()
-    {
-        ws.Addr = InputIP.GetComponent<InputField>().text;
-        LabelIPError.GetComponent<Text>().text = "接続中です...";
+        ws.Addr = _InputIP.text;
+        _LabelIPMode.text = "接続中です...";
         Canvas.ForceUpdateCanvases();
+
+        isCustomizeMode = _isPerformer;
 
         var res = ws.RequestHTTP(Method.GET, "check");
         if (res == null)
         {
             // 接続不可
-            LabelIPError.GetComponent<Text>().text = "サーバに接続することができませんでした" + Environment.NewLine + "IPアドレスをご確認ください";
+            _LabelIPMode.color = Color.red;
+            _LabelIPMode.fontSize = 32;
+            _LabelIPMode.text = "サーバに接続することができませんでした" + Environment.NewLine + "IPアドレスをご確認ください";
             return;
 
         }
@@ -145,21 +138,25 @@ public class UIManager : MonoBehaviour
     public void BtnPin_OnClick()
     {
         // Pin入力完了
-        LabelPinError.GetComponent<Text>().text = "確認中です...";
+        _LabelPin.text = "確認中です...";
         Canvas.ForceUpdateCanvases();
-        var pin = InputPin.GetComponent<InputField>().text;
+        var pin = _InputPin.text;
 
         var res = ws.RequestHTTP(Method.POST, "pin", pin);
         if (res == null)
         {
             // 接続エラー
-            LabelPinError.GetComponent<Text>().text = "接続時にエラーが発生しました";
+            _LabelPin.color = Color.red;
+            _LabelPin.fontSize = 32;
+            _LabelPin.text = "接続時にエラーが発生しました";
             return;
         }
         else if (res != "ok")
         {
             // 不正なPIN
-            LabelPinError.GetComponent<Text>().text = "PINが正しくありません";
+            _LabelPin.color = Color.red;
+            _LabelPin.fontSize = 32;
+            _LabelPin.text = "PINが正しくありません";
             return;
         }
 
@@ -179,16 +176,60 @@ public class UIManager : MonoBehaviour
             {
                 isDemo = true;
 
-                var demo = new GameObject("DEMO");
-                demo.AddComponent<DemoManager>();
+                if (GameObject.Find("DEMO") == null)
+                {
+                    var demo = new GameObject("DEMO");
+                    demo.AddComponent<DemoManager>();
+                }
 
-                ModeView.transform.Find("Image").GetComponent<Image>().color = new Color32(69, 69, 69, 255);
-                ModeView.transform.Find("Text").GetComponent<Text>().color = Color.white;
-                TransitionView("Forward", ModeView);
+                IPModeView.transform.Find("Image").GetComponent<Image>().color = new Color32(69, 69, 69, 255);
+                _LabelIPMode.text = "DEMO MODE\nモードを選択してください";
+                _InputIP.interactable = false;
+
+                TransitionView("Forward", IPModeView);
             }
         }
 
         _LogoTapped = Time.time;
+    }
+
+    public void Version_OnPointerClicked()
+    {
+        if (isDemo) return;
+
+        if (Time.time - _VersionTapped >= 3.0f)
+            _VersionTapCount = 0;
+        else
+        {
+            _VersionTapCount++;
+            if (_VersionTapCount >= 3)
+            {
+                Blocker.SetActive(true);
+            }
+        }
+
+        _VersionTapped = Time.time;
+    }
+
+    public void Blocker_OnPointerClicked()
+    {
+        _CurrentPage++;
+        _CurrentPage %= 4;
+
+        switch (_CurrentPage)
+        {
+            case 0:
+                IPModeView.GetComponent<RectTransform>().anchorMin = new Vector2(1, 0);
+                IPModeView.GetComponent<RectTransform>().anchorMax = new Vector2(2, 1);
+                PinView.GetComponent<RectTransform>().anchorMin = new Vector2(2, 0);
+                PinView.GetComponent<RectTransform>().anchorMax = new Vector2(3, 1);
+                CalibWaitView.GetComponent<RectTransform>().anchorMin = new Vector2(3, 0);
+                CalibWaitView.GetComponent<RectTransform>().anchorMax = new Vector2(4, 1);
+                break;
+            case 1: TransitionView("Forward", IPModeView); break;
+            case 2: TransitionView("Forward", PinView); break;
+            case 3: TransitionView("Forward", CalibWaitView); break;
+        }   
     }
 
     private void ProcessQR(QRData _data)
@@ -196,15 +237,16 @@ public class UIManager : MonoBehaviour
         _QR.CamStop();
 
         ws.Addr = _data.IP;
-        LabelQRError.GetComponent<Text>().text = "接続中です...";
+        _LabelQR.text = "接続中です...";
         Canvas.ForceUpdateCanvases();
 
         var res = ws.RequestHTTP(Method.GET, "check");
         if (res == null)
         {
             // 接続不可
-            LabelQRError.GetComponent<Text>().color = new Color32(255, 0, 0, 255);
-            LabelQRError.GetComponent<Text>().text = "サーバに接続することができませんでした";
+            _LabelQR.color = Color.red;
+            _LabelQR.fontSize = 32;
+            _LabelQR.text = "サーバに接続することができませんでした";
             _QR.CamStart();
             return;
 
@@ -212,8 +254,7 @@ public class UIManager : MonoBehaviour
         else if (res != "authenticated" && _data.isPerformer)
         {
             // パフォーマーモード
-            LabelQRError.GetComponent<Text>().color = new Color32(0, 0, 0, 255);
-            LabelQRError.GetComponent<Text>().text = "確認中です...";
+            _LabelQR.text = "確認中です...";
             Canvas.ForceUpdateCanvases();
             var pin = _data.PIN;
 
@@ -221,8 +262,9 @@ public class UIManager : MonoBehaviour
             if (res != "ok")
             {
                 // 不正なPIN
-                LabelQRError.GetComponent<Text>().color = new Color32(255, 0, 0, 255);
-                LabelQRError.GetComponent<Text>().text = "PINが正しくありません";
+                _LabelQR.color = Color.red;
+                _LabelQR.fontSize = 32;
+                _LabelQR.text = "PINが正しくありません";
                 _QR.CamStart();
                 return;
             }

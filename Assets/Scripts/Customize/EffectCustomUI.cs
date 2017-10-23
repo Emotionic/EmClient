@@ -30,7 +30,7 @@ public class EffectCustomUI : MonoBehaviour
 
     public Dictionary<string, Gesture> GestureList; // 動きのリスト
     public Dictionary<string, Effect> EffectList;  // エフェクトのリスト
-    public Dictionary<string, Color32> ColorList;  // 色のリスト
+    public Dictionary<string, Color> ColorList;  // 色のリスト
 
     public Dictionary<Gesture, Dictionary<Effect, EffectOption>> EffectsCustomize;
 
@@ -44,7 +44,7 @@ public class EffectCustomUI : MonoBehaviour
     private int TransitionState = 0; // CustomDialogの遷移モード
     private float dialogAlpha = 0; // CustomDialogの現在の透明度
 
-    private Gesture selectedGesture;
+    private Gesture? selectedGesture = null;
     private List<string> selectedParts;
     private Effect selectedEffect;
 
@@ -54,17 +54,20 @@ public class EffectCustomUI : MonoBehaviour
         foreach (var g in Enum.GetValues(typeof(Gesture)))
             EffectsCustomize.Add((Gesture)g, new Dictionary<Effect, EffectOption>());
         selectedParts = new List<string>();
+        SetDefault();
 
         GestureList = new Dictionary<string, Gesture>()
         {
             { "常時", Gesture.Always},
             { "ジャンプ", Gesture.Jump },
-            { "スペシウム光線", Gesture.Specium },
+            { "拍手", Gesture.ChimpanzeeClap },
             { "パンチ", Gesture.Punch },
-            { "ラジオ体操", Gesture.Exercise }
+            { "かめはめ波", Gesture.Kamehameha },
+            { "スペシウム光線", Gesture.Specium },
+            { "DAISUKE", Gesture.Daisuke }
         };
 
-        ColorList = new Dictionary<string, Color32>()
+        ColorList = new Dictionary<string, Color>()
         {
             { "赤", Color.red },
             { "青", Color.blue },
@@ -78,7 +81,7 @@ public class EffectCustomUI : MonoBehaviour
         {
             { "ラインエフェクト", Effect.Line },
             { "ビーム", Effect.Beam },
-            { "パンチエフェクト", Effect.Punch },
+            { "拍手", Effect.Clap },
             { "波紋", Effect.Ripple },
             { "爆発", Effect.Impact }
         };
@@ -117,9 +120,86 @@ public class EffectCustomUI : MonoBehaviour
         }
     }
 
+    private void SetDefault()
+    {
+        foreach (var item in EffectsCustomize)
+        {
+            item.Value.Clear();
+        }
+
+        // ラインエフェクト
+        {
+            var eOption = new EffectOption();
+            eOption.AttachedParts = new List<string>() { "HandTipLeft", "HandTipRight", "FootLeft", "FootRight" };
+            eOption.IsRainbow = true;
+            eOption.Scale = 1.0f;
+            EffectsCustomize[Gesture.Always].Add(Effect.Line, eOption);
+        }
+
+        // パンチ
+        {
+            var eOption = new EffectOption();
+            eOption.AttachedParts = new List<string>() { "HandTipLeft", "HandTipRight" };
+            eOption.Color = ColorToFloatList(Color.blue);
+            eOption.IsRainbow = false;
+            eOption.Scale = 1.0f;
+            EffectsCustomize[Gesture.Punch].Add(Effect.Ripple, eOption);
+        }
+
+        // ジャンプ
+        {
+            var eOption = new EffectOption();
+            eOption.AttachedParts = new List<string>() { "Body" };
+            eOption.Color = ColorToFloatList(Color.yellow);
+            eOption.IsRainbow = false;
+            eOption.Scale = 1.0f;
+            EffectsCustomize[Gesture.Jump].Add(Effect.Impact, eOption);
+        }
+
+        // 拍手
+        {
+            var eOption = new EffectOption();
+            eOption.AttachedParts = new List<string>() { "HandTipLeft", "HandTipRight" };
+            eOption.Color = ColorToFloatList(Color.yellow);
+            eOption.IsRainbow = false;
+            eOption.Scale = 1.0f;
+            EffectsCustomize[Gesture.ChimpanzeeClap].Add(Effect.Clap, eOption);
+        }
+
+        // Daisuke
+        {
+            var eOption = new EffectOption();
+            eOption.AttachedParts = new List<string>() { "Head" };
+            eOption.Color = ColorToFloatList(Color.yellow);
+            eOption.IsRainbow = false;
+            eOption.Scale = 1.0f;
+            EffectsCustomize[Gesture.Daisuke].Add(Effect.Impact, eOption);
+        }
+
+        // かめはめ波
+        {
+            var eOption = new EffectOption();
+            eOption.AttachedParts = new List<string>() { "HandLeft" };
+            eOption.Color = ColorToFloatList(Color.yellow);
+            eOption.IsRainbow = false;
+            eOption.Scale = 1.0f;
+            EffectsCustomize[Gesture.Kamehameha].Add(Effect.Beam, eOption);
+        }
+    }
+
     public void ReloadUI()
     {
-        // Motion
+        ReloadMotionSelTab();
+        ReloadEffSelTab();
+
+        // DDColor
+        DDColor.ClearOptions();
+        DDColor.AddOptions(ColorList.Keys.ToList());
+        DDColor.RefreshShownValue();
+    }
+
+    private void ReloadMotionSelTab()
+    {
         // 既存のListを削除
         foreach (Transform obj in MotionSelTab_Content.transform)
         {
@@ -140,17 +220,26 @@ public class EffectCustomUI : MonoBehaviour
             entry.callback.AddListener((value) =>
             {
                 MotionSelTab.SetActive(false);
-                PartSelTab.SetActive(true);
                 selectedGesture = item.Value;
                 Title.text = "部位を選択";
+
+                // トグルを全て無効化
+                foreach (var t in TogglesPart)
+                {
+                    t.isOn = false;
+                }
+
+                PartSelTab.SetActive(true);
             });
 
             var trigger = _list.AddComponent<EventTrigger>();
             trigger.triggers.Add(entry);
 
         }
+    }
 
-        // Effect
+    private void ReloadEffSelTab()
+    {
         // 既存のToggleを削除
         foreach (Transform obj in EffSelTab_Content.transform)
         {
@@ -165,7 +254,7 @@ public class EffectCustomUI : MonoBehaviour
             _toggle.SetActive(true);
             _toggle.transform.Find("Label").GetComponent<Text>().text = item.Key;
             var toggle = _toggle.GetComponent<Toggle>();
-            toggle.isOn = false;
+            toggle.isOn = selectedGesture.HasValue && EffectsCustomize[selectedGesture.Value].ContainsKey(item.Value);
 
             toggle.onValueChanged.AddListener((value) =>
             {
@@ -176,9 +265,10 @@ public class EffectCustomUI : MonoBehaviour
                     // カスタマイズデータに追加
                     var option = new EffectOption();
                     option.AttachedParts = selectedParts;
-                    option.Color = ColorToFloatList(ColorList[DDColor.options[0].text]);
+                    option.Color = ColorToFloatList(ColorList[DDColor.options[DDColor.value].text]);
+                    option.Scale = SliderScale.value;
                     option.IsRainbow = false;
-                    EffectsCustomize[selectedGesture].Add(item.Value, option);
+                    EffectsCustomize[selectedGesture.Value].Add(item.Value, option);
 
                     selectedEffect = item.Value;
 
@@ -201,25 +291,27 @@ public class EffectCustomUI : MonoBehaviour
                 else
                 {
                     // カスタマイズデータから削除
-                    EffectsCustomize[selectedGesture].Remove(item.Value);
+                    EffectsCustomize[selectedGesture.Value].Remove(item.Value);
                 }
             });
         }
-
-        // DDColor
-        DDColor.ClearOptions();
-        DDColor.AddOptions(ColorList.Keys.ToList());
-        DDColor.RefreshShownValue();
     }
 
     public void BtnDefault_OnClicked()
     {
         DialogManager.Instance.SetLabel("はい", "いいえ", "閉じる");
-        DialogManager.Instance.ShowSelectDialog("最初の設定に戻しますか？", (ret) => { });
+        DialogManager.Instance.ShowSelectDialog("最初の設定に戻しますか？", (ret) =>
+        {
+            SetDefault();
+        });
     }
 
     public void BtnClose_OnClicked()
     {
+        EffectsCustomize[selectedGesture.Value][selectedEffect].Color = ColorToFloatList(ColorList[DDColor.options[DDColor.value].text]);
+        EffectsCustomize[selectedGesture.Value][selectedEffect].IsRainbow = DDColor.options[DDColor.value].text == "虹色";
+        EffectsCustomize[selectedGesture.Value][selectedEffect].Scale = SliderScale.value;
+
         TransitionState = -1;
     }
 
@@ -229,6 +321,8 @@ public class EffectCustomUI : MonoBehaviour
         EffSelTab.SetActive(false);
         MotionSelTab.SetActive(true);
         Title.text = "動きを選択";
+
+        selectedGesture = null;
     }
 
     public void BtnToEffect_OnClicked()
@@ -244,19 +338,19 @@ public class EffectCustomUI : MonoBehaviour
             }
         }
 
+        if (selectedParts.Count == 0)
+        {
+            PartSelTab.SetActive(true);
+
+            DialogManager.Instance.SetLabel("OK", "キャンセル", "閉じる");
+            DialogManager.Instance.ShowSubmitDialog("エラー", "部位を1つ以上選択してください。", (ret) => { });
+
+            return;
+        }
+
+        ReloadEffSelTab();
         EffSelTab.SetActive(true);
         Title.text = "エフェクトを選択";
-    }
-
-    public void DDColor_OnValueChanged()
-    {
-        EffectsCustomize[selectedGesture][selectedEffect].Color = ColorToFloatList(ColorList[DDColor.options[DDColor.value].text]);
-        EffectsCustomize[selectedGesture][selectedEffect].IsRainbow = DDColor.options[DDColor.value].text == "虹色";
-    }
-
-    public void SliderScale_OnValueChanged()
-    {
-        EffectsCustomize[selectedGesture][selectedEffect].Scale = SliderScale.value;
     }
 
     private List<float> ColorToFloatList(Color _col)

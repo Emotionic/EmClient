@@ -16,7 +16,7 @@ public class CustomManager : MonoBehaviour
     private Dictionary<string, string> titles = new Dictionary<string, string>()
     {
         { "General", "全般" },
-        { "ShareJoin", "共有・観客参加" },
+        { "ShareJoin", "観客参加" },
         { "Effect", "動きを選択" },
         { "Debug", "*** デバッグ ***" }
     };
@@ -43,6 +43,19 @@ public class CustomManager : MonoBehaviour
 
     public void BtnStart_OnClicked()
     {
+        // バリデーション
+        var _limit = UIParts["General"].transform.Find("InputLimit").GetComponent<InputField>().text;
+        int limit;
+        if (!int.TryParse(_limit, out limit) || limit < 0)
+        {
+            Debug.LogWarning("InputLimit is not valid.");
+
+            DialogManager.Instance.SetLabel("OK", "キャンセル", "閉じる");
+            DialogManager.Instance.ShowSubmitDialog("エラー", "時間制限には0以上の値を入力してください。", (ret) => {});
+
+            return;
+        }
+
         if (isFirstSend)
         {
             UIChange_OnPerformStart();
@@ -100,20 +113,28 @@ public class CustomManager : MonoBehaviour
         //横画面にする
         Screen.orientation = ScreenOrientation.LandscapeLeft;
 
+        customData = new CustomData();
+
         InitUIParts();
         ChangePanel("General");
 
         if (GameObject.Find("WSClient") != null && GameObject.Find("WSClient").GetComponent<WSClient>().isConnected)
         {
             ws = GameObject.Find("WSClient").GetComponent<WSClient>();
-            customData = ws.CustomDefault;
-            UIParts["ShareJoin"].transform.Find("ToggleDoShare").GetComponent<Toggle>().isOn = customData.DoShare;
+
+            if (!string.IsNullOrEmpty(ws.EnabledJoinTypes))
+            {
+                var toggles_jointype = UIParts["ShareJoin"].transform.Find("Toggles_JoinType");
+                toggles_jointype.Find("ToggleLike").GetComponent<Toggle>().interactable = ws.EnabledJoinTypes[3] == '1';
+                toggles_jointype.Find("ToggleCrap").GetComponent<Toggle>().interactable = ws.EnabledJoinTypes[2] == '1';
+                toggles_jointype.Find("ToggleKinect").GetComponent<Toggle>().interactable = ws.EnabledJoinTypes[1] == '1';
+                toggles_jointype.Find("ToggleAR").GetComponent<Toggle>().interactable = ws.EnabledJoinTypes[0] == '1';
+            }
 
             if (ws.isAuthenticated)
             {
                 UIChange_OnPerformStart();
             }
-
         }
         else
             Debug.LogWarning("WSClient is null.");
@@ -122,7 +143,7 @@ public class CustomManager : MonoBehaviour
 
     private void UIChange_OnPerformStart()
     {
-        var general = this.gameObject.transform.Find("Panel_General").transform;
+        var general = UIParts["General"].transform;
         general.Find("ToggleDoShare").GetComponent<Toggle>().interactable = false;
         general.Find("InputLimit").GetComponent<InputField>().interactable = false;
 
@@ -134,14 +155,28 @@ public class CustomManager : MonoBehaviour
         isFirstSend = false;
     }
 
+    public void Reset_UIChange()
+    {
+        var general = UIParts["General"].transform;
+        general.Find("ToggleDoShare").GetComponent<Toggle>().interactable = true;
+        general.Find("InputLimit").GetComponent<InputField>().interactable = true;
+
+        var menu = this.gameObject.transform.Find("Menu").transform;
+        menu.Find("BtnStart").GetComponent<Image>().color = new Color32(206, 231, 255, 255);
+        menu.Find("BtnStart").Find("Text").GetComponent<Text>().text = "開始";
+        menu.Find("BtnEnd").GetComponent<Button>().interactable = false;
+
+        isFirstSend = true;
+    }
+
     private void InitUIParts()
     {
-        foreach (var name in ui_parts_name)
+        foreach (var _name in ui_parts_name)
         {
-            var obj = this.gameObject.transform.Find("Panel_" + name);
+            var obj = this.gameObject.transform.Find("Panel_" + _name);
             if (obj != null)
             {
-                UIParts.Add(name, obj.gameObject);
+                UIParts.Add(_name, obj.gameObject);
                 obj.gameObject.SetActive(false);
             }
         }
@@ -156,7 +191,7 @@ public class CustomManager : MonoBehaviour
         if (oldItem != null && oldPanel.name != "Panel_Debug")
             oldItem.color = Color.white;
 
-        var obj = this.gameObject.transform.Find("Panel_" + _name).gameObject;
+        var obj = UIParts[_name];
         obj.SetActive(true);
         var menu = this.gameObject.transform.Find("Menu");
         var btn = menu.Find("Item_" + _name).Find("Background").GetComponent<Image>();
@@ -167,14 +202,24 @@ public class CustomManager : MonoBehaviour
         oldPanel = obj;
         oldItem = btn;
 
+        if (_name == "Debug")
+        {
+            // 変更イベントの通知
+            obj.GetComponent<DebugUI>().OnTabChanged();
+        }
+
     }
 
-    private void MakeCustomData()
+    public void MakeCustomData()
     {
+        var general = UIParts["General"].transform;
         var shareJoin = UIParts["ShareJoin"].transform;
         var effect = UIParts["Effect"].transform;
-        customData.DoShare = shareJoin.Find("ToggleDoShare").GetComponent<Toggle>().isOn;
 
+        customData.DoShare = general.Find("ToggleDoShare").GetComponent<Toggle>().isOn;
+        customData.IsZNZOVisibled = general.Find("ToggleZNZO").GetComponent<Toggle>().isOn;
+        customData.TimeLimit = int.Parse(general.Find("InputLimit").GetComponent<InputField>().text);
+            
         var toggles_jointype = shareJoin.Find("Toggles_JoinType");
         int joinType = 0;
         if (toggles_jointype.Find("ToggleLike").GetComponent<Toggle>().isOn)
@@ -183,10 +228,13 @@ public class CustomManager : MonoBehaviour
             joinType += 10;
         if (toggles_jointype.Find("ToggleKinect").GetComponent<Toggle>().isOn)
             joinType += 100;
+        if (toggles_jointype.Find("ToggleAR").GetComponent<Toggle>().isOn)
+            joinType += 1000;
         customData.JoinType = joinType;
 
         customData.EnabledLikes = shareJoin.Find("ScrollView_EnabledEffects").GetComponent<ChooseEffectsBehaviour>().GetEnableEffects();
         customData.EffectsCustomize = effect.GetComponent<EffectCustomUI>().EffectsCustomize;
+        
     }
 
     public void Logo_OnPointerClicked()

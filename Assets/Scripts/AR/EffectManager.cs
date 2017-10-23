@@ -1,26 +1,50 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Linq;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class EffectManager : MonoBehaviour
 {
+    public Text LabelDebug;
+    public ARTrackHandler Handler;
     public GameObject Trail;
 
-    private RainbowColor _RbColor;
+    private readonly string[] _EffectNames = { "StairBroken", "punch", "laser" };
+
+    private readonly Dictionary<string, Gesture> _GestureRelation = new Dictionary<string, Gesture>()
+    {
+        { "Jump", Gesture.Jump },
+        { "Punch", Gesture.Punch },
+        {"ChimpanzeeClap_Left", Gesture.ChimpanzeeClap  },
+        {"ChimpanzeeClap_Right", Gesture.ChimpanzeeClap },
+        {"Daisuke", Gesture.Daisuke },
+        {"Kamehameha", Gesture.Kamehameha },
+    };
+
+    private readonly Dictionary<Effect, string> _EffectRelation = new Dictionary<Effect, string>()
+    {
+        { Effect.Impact, "StairBroken" }
+    };
+
+    private Dictionary<Effect, GameObject> _EffectPrefabs;
 
     /// <summary>
     /// AR情報からエフェクトを生成します。
     /// </summary>
-    public void GenEffect(EffectData _eff)
+    public void GenEffect(EffectData _eff, bool useAR)
     {
+        LabelDebug.text = Handler.IsTracking ? "Tracking" : "Lost";
+        if (useAR && !Handler.IsTracking)
+            return;
+
         if (_eff.Name.StartsWith("LINE"))
         {
             // ラインエフェクトの生成
-
             Transform trail;
             var jointObj = GameObject.Find(_eff.Name).transform;
-            jointObj.transform.position = _eff.Position;
+            jointObj.transform.position = Camera.main.ViewportToWorldPoint(_eff.Position);
             jointObj.transform.localRotation = _eff.Rotation;
             jointObj.transform.localScale = _eff.Scale;
 
@@ -32,35 +56,36 @@ public class EffectManager : MonoBehaviour
             trail = jointObj.Find(Trail.name);
             TrailRenderer tr = trail.GetComponent<TrailRenderer>();
             ParticleSystem[] pss =
-                {
+            {
                     trail.Find("Hand Particle").GetComponent<ParticleSystem>(),
                     trail.Find("NG Hand Particle").GetComponent<ParticleSystem>()
-                    };
+            };
 
-            if (_eff.IsRainbow)
+            tr.startColor = _eff.Color;
+            foreach (ParticleSystem ps in pss)
             {
-                tr.startColor = _RbColor.Rainbow;
-                foreach (ParticleSystem ps in pss)
-                {
-                    ps.startColor = _RbColor.Rainbow;
-                }
-            }
-            else
-            {
-                tr.startColor = _eff.Color;
-                foreach (ParticleSystem ps in pss)
-                {
-                    ps.startColor = _eff.Color;
-                }
+                ps.startColor = _eff.Color;
+
             }
 
         }
         else
         {
-            PlayEffect(_eff);
-
+            //var effect = (Effect)Enum.Parse(typeof(Effect), _eff.Name);
+            //if (_EffectRelation.ContainsKey(effect))
+            //{
+            //    _eff.Name = _EffectRelation[effect];
+            //    PlayEffect(_eff);
+            //}
+            //else
+            //{
+            //    var effe = Instantiate(_EffectPrefabs[effect]);
+            //    effe.transform.position = _eff.Position;
+            //    effe.transform.rotation = _eff.Rotation;
+            //    effe.GetComponent<ParticleSystem>().Play(true);
+            //    Destroy(effe.gameObject, 10);
+            //}
         }
-
     }
 
     /// <summary>
@@ -69,11 +94,11 @@ public class EffectManager : MonoBehaviour
     public void PlayEffect(EffectData _eff)
     {
         var target = new GameObject();
-        target.transform.position = _eff.Position;
+        target.transform.position = Camera.main.ViewportToWorldPoint(_eff.Position);
         target.transform.rotation = _eff.Rotation;
         target.transform.localScale = _eff.Scale;
 
-        var effobj = new EffectObject(target, _eff.Name, _eff.DoLoop);
+        var effobj = new EffectObject(target, _eff.Name);
         effects.Add(effobj);
         Play(effobj);
 
@@ -92,7 +117,13 @@ public class EffectManager : MonoBehaviour
     private void Awake()
     {
         effects = new List<EffectObject>();
-        _RbColor = new RainbowColor(0, 0.001f);
+
+        _EffectPrefabs = new Dictionary<Effect, GameObject>()
+    {
+        { Effect.Beam, Resources.Load<GameObject>("Prefabs/KamehameCharge") },
+        { Effect.Ripple, Resources.Load<GameObject>("Prefabs/punch")},
+        {Effect.Ripple, Resources.Load<GameObject>("Prefabs/clap_effe") }
+    };
     }
 
     private void Update()
@@ -113,10 +144,6 @@ public class EffectManager : MonoBehaviour
                     h.SetRotation(tran.rotation);
                     h.SetScale(tran.localScale);
                 }
-                else if (eff.DoLoop)
-                {
-                    Play(eff);
-                }
                 else
                 {
                     h.Stop();
@@ -125,7 +152,7 @@ public class EffectManager : MonoBehaviour
             }
 
             // 使い終わったGameObjectの破棄
-            foreach(var eff in effects)
+            foreach (var eff in effects)
             {
                 if (eff.Handle == null)
                 {
@@ -136,8 +163,6 @@ public class EffectManager : MonoBehaviour
             // リストから削除
             effects.RemoveAll(eff => eff.Handle == null);
         }
-
-        _RbColor.Update();
 
     }
 
@@ -156,4 +181,3 @@ public class EffectManager : MonoBehaviour
     }
 
 }
-
